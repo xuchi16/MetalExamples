@@ -27,6 +27,7 @@ class ViewController: UIViewController {
 
         // 初始化 Renderer 并设置为 MTKView 的代理
         renderer = Renderer(device: device)
+        renderer?.scene = GameScene(device: device, size: view.bounds.size)
         metalView.delegate = renderer
     }
 }
