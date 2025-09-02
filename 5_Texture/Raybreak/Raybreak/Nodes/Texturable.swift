@@ -8,6 +8,22 @@ protocol Texturable {
 
 extension Texturable {
     func setTexture(device: MTLDevice, imageName: String) -> MTLTexture? {
-        return nil
+        let textureLoader = MTKTextureLoader(device: device)
+        
+        var texture: MTLTexture?
+        
+        let textureLoaderOptions: [MTKTextureLoader.Option: Any] = [
+            .origin: MTKTextureLoader.Origin.bottomLeft
+        ]
+        
+        if let textureURL = Bundle.main.url(forResource: imageName, withExtension: nil) {
+            do {
+                texture = try textureLoader.newTexture(URL: textureURL, options: textureLoaderOptions)
+            } catch {
+                print("Failed to create texture")
+            }
+        }
+        
+        return texture
     }
 }
