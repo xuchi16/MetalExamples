@@ -7,6 +7,9 @@ class Model: Node {
     var meshes: [AnyObject]?
     var modelConstants = ModelConstants()
 
+    // Texturable
+    var texture: MTLTexture?
+
     // Renderable
     var pipelineState: MTLRenderPipelineState!
     var fragmentFunctionName: String = "fragment_shader"
@@ -39,6 +42,13 @@ class Model: Node {
         super.init()
         name = modelName
         loadModel(device: device, modelName: modelName)
+
+        let imageName = modelName + ".png"
+        if let texture = setTexture(device: device, imageName: imageName) {
+            self.texture = texture
+            fragmentFunctionName = "textured_fragment"
+        }
+
         pipelineState = buildPipelineState(device: device)
     }
 
@@ -85,7 +95,9 @@ extension Model: Renderable {
         commandEncoder.setVertexBytes(&modelConstants,
                                       length: MemoryLayout<ModelConstants>.stride,
                                       index: 1)
-
+        if texture != nil {
+            commandEncoder.setFragmentTexture(texture, index: 0)
+        }
         commandEncoder.setRenderPipelineState(pipelineState)
 
         guard let meshes = meshes as? [MTKMesh],
@@ -111,3 +123,4 @@ extension Model: Renderable {
     }
 }
 
+extension Model: Texturable {}
