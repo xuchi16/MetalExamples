@@ -7,6 +7,10 @@ struct ModelConstants {
     float4x4 modelViewMatrix;
 };
 
+struct SceneConstants {
+  float4x4 projectionMatrix;
+};
+
 struct VertexIn {
     float4 position [[ attribute(0) ]]; // 即使Swift定义里这里是 float3，也得用float4来获取该参数
     float4 color [[ attribute(1) ]];
@@ -20,13 +24,12 @@ struct VertexOut {
 };
 
 vertex VertexOut vertex_shader(const VertexIn vertexIn [[ stage_in ]],
-                               constant ModelConstants &modelConstants [[ buffer(1) ]]) {
+                               constant ModelConstants &modelConstants [[ buffer(1) ]],
+                               constant SceneConstants &sceneConstants [[ buffer(2) ]]) {
     
     VertexOut vertexOut;
-    vertexOut.position = vertexIn.position;
-    
-    vertexOut.position = modelConstants.modelViewMatrix * vertexIn.position;
-    
+    float4x4 matrix = sceneConstants.projectionMatrix * modelConstants.modelViewMatrix;
+    vertexOut.position = matrix * vertexIn.position;
     vertexOut.color = vertexIn.color;
     vertexOut.textureCoordinates = vertexIn.textureCoordinates;
     
