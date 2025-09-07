@@ -1,26 +1,47 @@
 // Created by Chester for InteractiveGeometry in 2025
 
 import RealityKit
-import RealityKitContent
 import SwiftUI
 
-struct ContentView: View {
+struct HeightMapMeshView: View {
+    /// The dimensions of the plane mesh.
     private let meshDimensions = SIMD2<UInt32>(512, 512)
+    /// The size of the plane mesh.
     private let meshSize = SIMD2<Float>(1, 1)
+
+    /// The entity that contains the scene.
     private var sceneContainer: Entity = .init()
+    /// The entity that contains the default plane mesh.
     private let defaultPlaneContainer: Entity = .init()
+    /// The height map mesh entity.
     private let heightMapMeshEntity: HeightMapMeshEntity
 
-    // Materials
     private let sineWaveMaterial: SimpleMaterial = .init(color: #colorLiteral(red: 0.4666666687, green: 0.7647058964, blue: 0.2666666806, alpha: 1), roughness: 0.85, isMetallic: false)
     private let terrainMaterial: SimpleMaterial = .init(color: #colorLiteral(red: 0.5058823824, green: 0.3372549117, blue: 0.06666667014, alpha: 1), roughness: 0.25, isMetallic: false)
     private let waterMaterial: SimpleMaterial = .init(color: #colorLiteral(red: 0, green: 0.8260448575, blue: 0.960488379, alpha: 1), roughness: 0.05, isMetallic: false)
 
+    private let sineWaveHeightMapGenerator: HeightMapGenerator = SineWaveHeightMapGenerator()
+    private let terrainHeightMapGenerator: HeightMapGenerator = TerrainHeightMapGenerator()
+    private let waterHeightMapGenerator: HeightMapGenerator = WaterSurfaceHeightMapGenerator()
+
     init() {
-        heightMapMeshEntity = HeightMapMeshEntity()
+        // Register the compute dispatch system.
+        ComputeDispatchSystem.registerSystem()
+        // Create the height map mesh entity.
+        heightMapMeshEntity = HeightMapMeshEntity(size: meshSize, dimensions: meshDimensions, maxVertexDepth: 1)
     }
-    
-    // Pickers
+
+    /// Sets the height map generator and material that the `heightMapMeshEntity` uses.
+    private func setHeightMapGenerator(heightMapGenerator: HeightMapGenerator, material: SimpleMaterial) {
+        heightMapGenerator.reset()
+        heightMapMeshEntity.heightMapMesh?.heightMap.heightMapGenerator = heightMapGenerator
+        heightMapMeshEntity.model?.materials = [material]
+    }
+
+    #if os(visionOS)
+    @Environment(\.physicalMetrics) var physicalMetrics
+    #endif
+
     enum Generator: String, CaseIterable, Identifiable {
         var id: String { rawValue }
 
@@ -57,52 +78,26 @@ struct ContentView: View {
                 // Set the current height map generator.
                 switch newValue {
                     case .sine:
-                        print("Sine")
-
-//                        setHeightMapGenerator(heightMapGenerator: sineWaveHeightMapGenerator, material: sineWaveMaterial)
+                        setHeightMapGenerator(heightMapGenerator: sineWaveHeightMapGenerator, material: sineWaveMaterial)
                     case .terrain:
-                        print("Terrain")
-
-//                        setHeightMapGenerator(heightMapGenerator: terrainHeightMapGenerator, material: terrainMaterial)
+                        setHeightMapGenerator(heightMapGenerator: terrainHeightMapGenerator, material: terrainMaterial)
                     case .water:
-                        print("Water")
-
-//                        setHeightMapGenerator(heightMapGenerator: waterHeightMapGenerator, material: waterMaterial)
+                        setHeightMapGenerator(heightMapGenerator: waterHeightMapGenerator, material: waterMaterial)
                     case .plane:
                         break
                 }
             }
     }
 
-//    private func setHeightMapGenerator(heightMapGenerator: HeightMapGenerator, material: SimpleMaterial) {
-//        heightMapGenerator.reset()
-//        heightMapMeshEntity.heightMapMesh?.heightMap.heightMapGenerator = heightMapGenerator
-//        heightMapMeshEntity.model?.materials = [material]
-//    }
-
-    var body: some View {
-        RealityView { content in
-            let scene = createScene()
-            // Position it just above the toolbar of the volume.
-            scene.position.y = -0.425
-            // Add it to the reality view.
-            sceneContainer.addChild(scene)
-            content.add(sceneContainer)
-        }
-        .toolbar {
-            ToolbarItem(placement: .bottomOrnament) {
-                generatorPicker
-            }
-        }
-    }
-
+    // Creates the scene the `RealityView` renders.
     func createScene() -> Entity {
         // Create a scene entity.
         let scene = Entity()
 
         // Create the default plane mesh.
-        let planeMesh = PlaneMesh(size: meshSize, dimensions: meshDimensions)
-        if let mesh = try? MeshResource(from: planeMesh.mesh) {
+        if let planeMesh = try? PlaneMesh(size: meshSize, dimensions: meshDimensions),
+           let mesh = try? MeshResource(from: planeMesh.mesh)
+        {
             // Create an entity with the plane mesh.
             let planeEntity = Entity()
             let planeModel = ModelComponent(mesh: mesh, materials: [SimpleMaterial()])
@@ -113,9 +108,63 @@ struct ContentView: View {
             scene.addChild(defaultPlaneContainer)
         }
 
+        // Start with the water surface height map generator.
+        generator = .water
+
+        // Add the height map mesh entity to the scene.
+        scene.addChild(heightMapMeshEntity)
+
         // Rotate the scene to position the planes in xz-plane instead of the xy-plane.
         scene.transform.rotation = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
 
         return scene
+    }
+
+    var body: some View {
+        #if os(visionOS)
+        GeometryReader3D { geometry in
+            RealityView { content in
+                // Create the scene.
+                let scene = createScene()
+                // Position it just above the toolbar of the volume.
+                scene.position.y = -0.425
+                // Add it to the reality view.
+                sceneContainer.addChild(scene)
+                content.add(sceneContainer)
+            }
+            update: { _ in
+                // Resize the scene container to match the current size of the volume.
+                sceneContainer.scale = .init(physicalMetrics.convert(geometry.size, to: .meters))
+            }
+            .gesture(
+                DragGesture()
+                    .targetedToEntity(heightMapMeshEntity)
+                    .onChanged { value in
+                        let interactionPosition = value.convert(value.location3D,
+                                                                from: .local,
+                                                                to: heightMapMeshEntity)
+                        heightMapMeshEntity.heightMapMesh?.interactionPosition = interactionPosition
+                        heightMapMeshEntity.heightMapMesh?.isInteractionHappening = true
+                    }
+                    .onEnded { _ in
+                        heightMapMeshEntity.heightMapMesh?.isInteractionHappening = false
+                    }
+            )
+            .toolbar {
+                ToolbarItem(placement: .bottomOrnament) {
+                    generatorPicker
+                }
+            }
+        }
+        #else
+        VStack {
+            RealityView { content in
+                content.add(createScene())
+                content.cameraTarget = heightMapMeshEntity
+            }.realityViewCameraControls(.orbit)
+            generatorPicker
+                .padding()
+        }
+        #endif
     }
 }

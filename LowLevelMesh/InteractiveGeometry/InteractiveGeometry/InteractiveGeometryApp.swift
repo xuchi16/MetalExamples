@@ -9,7 +9,7 @@ struct InteractiveGeometryApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            HeightMapMeshView()
                 .environment(appModel)
         }
         .windowStyle(.volumetric)
