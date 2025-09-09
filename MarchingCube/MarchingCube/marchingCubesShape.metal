@@ -7,10 +7,7 @@ using namespace metal;
 #include "MarchingCubesParams.h"
 #include "edgeTable.h"
 #include "triTable.h"
-
-inline float sdf_sphere(float3 p, float3 c, float r) {
-    return length(p - c) - r;
-}
+#include "SDFPrimitives.metal"
 
 inline float3 interpolateIsoSurfacePosition(float3 pA, float valueA,
                                             float3 pB, float valueB,
@@ -22,9 +19,17 @@ inline float3 interpolateIsoSurfacePosition(float3 pA, float valueA,
     // return (pA + pB) * 0.5f;
 }
 
+inline float fieldValue(float3 worldPos, constant MarchingCubesParams& P) {
+    // 只使用一个形状（假设使用shape0）
+    return sdf_for_shape(3, worldPos, P.center, P.radius);
+}
+
 inline float3 estimateNormalFromField(float3 worldPos, constant MarchingCubesParams& P) {
     float h = 0.5f * min(P.cellSize.x, min(P.cellSize.y, P.cellSize.z));
-    return normalize(worldPos / (2.0f * h));    // TODO: 这里的法线计算没搞明白
+    float fx = fieldValue(worldPos + float3(h,0,0), P) - fieldValue(worldPos - float3(h,0,0), P);
+    float fy = fieldValue(worldPos + float3(0,h,0), P) - fieldValue(worldPos - float3(0,h,0), P);
+    float fz = fieldValue(worldPos + float3(0,0,h), P) - fieldValue(worldPos - float3(0,0,h), P);
+    return normalize(float3(fx, fy, fz) / (2.0f * h));
 }
 
 kernel void marchingCubesShape(device VertexData* outVertices [[buffer(0)]],
@@ -55,7 +60,7 @@ kernel void marchingCubesShape(device VertexData* outVertices [[buffer(0)]],
     for (int i = 0; i < 8; i++) {
         float3 cp = cellOriginWS + float3(cornerOffsets[i]) * params.cellSize;
         cornerPositionWS[i] = cp;
-        cornerScalar[i] = sdf_sphere(cp, params.center, params.radius);
+        cornerScalar[i] = fieldValue(cp, params);
     }
     
     int cubeIndex = 0;
