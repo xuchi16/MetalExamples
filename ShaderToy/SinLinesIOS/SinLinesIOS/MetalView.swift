@@ -61,7 +61,7 @@ class MetalViewController: UIViewController {
     private func buildPipelineState() {
         let library = device.makeDefaultLibrary()
         let vertexFunction = library?.makeFunction(name: "vertexShader")
-        let fragmentFunction = library?.makeFunction(name: "mainImage3")
+        let fragmentFunction = library?.makeFunction(name: "sineLines")
         let pipelineDescriptor = MTLRenderPipelineDescriptor()
         pipelineDescriptor.vertexFunction = vertexFunction
         pipelineDescriptor.fragmentFunction = fragmentFunction

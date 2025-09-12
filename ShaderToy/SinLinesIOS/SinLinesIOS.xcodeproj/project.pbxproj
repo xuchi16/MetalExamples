@@ -29,9 +29,33 @@
 		C2348FB72E7161A7009CAA38 /* SinLinesIOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SinLinesIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C2E67B712E74156B007B6EA6 /* Exceptions for "SinLinesIOS" folder in "SinLinesIOS" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Metal/MetalTypes.metalh,
+			);
+			target = C2348F9F2E7161A3009CAA38 /* SinLinesIOS */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		C2E67B722E74156B007B6EA6 /* Exceptions for "SinLinesIOS" folder in "Compile Sources" phase from "SinLinesIOS" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = C2348F9C2E7161A3009CAA38 /* Sources */;
+			membershipExceptions = (
+				Metal/MetalTypes.metalh,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C2348FA22E7161A3009CAA38 /* SinLinesIOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C2E67B712E74156B007B6EA6 /* Exceptions for "SinLinesIOS" folder in "SinLinesIOS" target */,
+				C2E67B722E74156B007B6EA6 /* Exceptions for "SinLinesIOS" folder in "Compile Sources" phase from "SinLinesIOS" target */,
+			);
 			path = SinLinesIOS;
 			sourceTree = "<group>";
 		};
