@@ -1,17 +1,8 @@
 // Created by Chester for SinLinesIOS in 2025
 
 import MetalKit
-import SwiftUI
 import simd
-
-struct VertexIn {
-    var position: SIMD2<Float>
-    var texCoord: SIMD2<Float>
-}
-
-enum Colors {
-    static let wenderlichGreen = MTLClearColor(red: 0.0, green: 0.4, blue: 0.21, alpha: 1.0)
-}
+import SwiftUI
 
 struct MetalView: UIViewControllerRepresentable {
     // 创建 UIViewController
@@ -36,19 +27,19 @@ class MetalViewController: UIViewController {
         super.viewDidLoad()
 
         // 程序化地初始化 MTKView
-        metalView = MTKView(frame: view.bounds) // 此前从 story board 获取
+        metalView = MTKView(frame: view.bounds)
+
         view.addSubview(metalView)
 
         // 设置 Metal
         metalView.device = MTLCreateSystemDefaultDevice()
         device = metalView.device
-        metalView.clearColor = Colors.wenderlichGreen
         metalView.delegate = self
         commandQueue = device.makeCommandQueue()
 
         // 加载着色器
         buildPipelineState()
-        
+
         // 设置 vertex buffer
         setupVertexBuffer()
     }
@@ -70,7 +61,7 @@ class MetalViewController: UIViewController {
     private func buildPipelineState() {
         let library = device.makeDefaultLibrary()
         let vertexFunction = library?.makeFunction(name: "vertexShader")
-        let fragmentFunction = library?.makeFunction(name: "mainImage")
+        let fragmentFunction = library?.makeFunction(name: "mainImage3")
         let pipelineDescriptor = MTLRenderPipelineDescriptor()
         pipelineDescriptor.vertexFunction = vertexFunction
         pipelineDescriptor.fragmentFunction = fragmentFunction
@@ -80,15 +71,15 @@ class MetalViewController: UIViewController {
         vertexDescriptor.attributes[0].format = .float2
         vertexDescriptor.attributes[0].offset = 0
         vertexDescriptor.attributes[0].bufferIndex = 0
-        
+
         vertexDescriptor.attributes[1].format = .float2
         vertexDescriptor.attributes[1].offset = MemoryLayout<SIMD2<Float>>.stride
         vertexDescriptor.attributes[1].bufferIndex = 0
-        
+
         vertexDescriptor.layouts[0].stride = MemoryLayout<VertexIn>.stride
-        
+
         pipelineDescriptor.vertexDescriptor = vertexDescriptor
-        
+
         do {
             pipelineState = try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
         } catch {
@@ -98,12 +89,6 @@ class MetalViewController: UIViewController {
 }
 
 extension MetalViewController: MTKViewDelegate {
-    // 设置 uniforms
-    struct ShaderUniforms {
-        var iResolution: SIMD4<Float>
-        var iTime: Float
-    }
-
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
 
     func draw(in view: MTKView) {
@@ -117,11 +102,7 @@ extension MetalViewController: MTKViewDelegate {
             return
         }
 
-        // 绘制
-        commandEncoder.setRenderPipelineState(pipelineState)
-
-        commandEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-
+        // 放置常用参数
         var uniforms = ShaderUniforms(
             iResolution: SIMD4<Float>(Float(view.drawableSize.width),
                                       Float(view.drawableSize.height),
@@ -129,15 +110,18 @@ extension MetalViewController: MTKViewDelegate {
             iTime: Float(CACurrentMediaTime())
         )
 
+        // 绘制
+        commandEncoder.setRenderPipelineState(pipelineState)
+        commandEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         commandEncoder.setFragmentBytes(&uniforms,
                                         length: MemoryLayout<ShaderUniforms>.stride,
                                         index: 0)
 
         // 绘制全屏四边形
         commandEncoder.drawPrimitives(type: .triangleStrip,
-                                     vertexStart: 0,
-                                     vertexCount: 4)
-        
+                                      vertexStart: 0,
+                                      vertexCount: 4)
+
         commandEncoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()
