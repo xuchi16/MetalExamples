@@ -5,14 +5,19 @@ import simd
 import SwiftUI
 
 struct MetalView: UIViewControllerRepresentable {
+    @Binding var selectedShader: ShaderType
+
     // 创建 UIViewController
     func makeUIViewController(context: Context) -> MetalViewController {
-        return MetalViewController()
+        let viewController = MetalViewController()
+        viewController.selectedShader = selectedShader
+        return viewController
     }
 
     // 更新 UIViewController（此处无需额外更新）
     func updateUIViewController(_ uiViewController: MetalViewController, context: Context) {
-        // 可根据需要更新视图控制器
+        uiViewController.selectedShader = selectedShader
+        uiViewController.updatePipelineState()
     }
 }
 
@@ -23,25 +28,28 @@ class MetalViewController: UIViewController {
     var pipelineState: MTLRenderPipelineState!
     private var vertexBuffer: MTLBuffer?
 
+    var selectedShader: ShaderType = .sineWave {
+        didSet {
+            if oldValue != selectedShader {
+                updatePipelineState()
+            }
+        }
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
+        setupMetalView()
+        setupVertexBuffer()
+        updatePipelineState()
+    }
 
-        // 程序化地初始化 MTKView
+    private func setupMetalView() {
         metalView = MTKView(frame: view.bounds)
-
         view.addSubview(metalView)
-
-        // 设置 Metal
         metalView.device = MTLCreateSystemDefaultDevice()
         device = metalView.device
         metalView.delegate = self
         commandQueue = device.makeCommandQueue()
-
-        // 加载着色器
-        buildPipelineState()
-
-        // 设置 vertex buffer
-        setupVertexBuffer()
     }
 
     private func setupVertexBuffer() {
@@ -58,10 +66,18 @@ class MetalViewController: UIViewController {
         vertexBuffer = device.makeBuffer(bytes: vertices, length: size, options: [])
     }
 
-    private func buildPipelineState() {
+    func updatePipelineState() {
+        do {
+            pipelineState = try buildPipelineState(for: selectedShader.fragmentShaderName)
+        } catch {
+            print("Error creating pipeline state: \(error.localizedDescription)")
+        }
+    }
+
+    private func buildPipelineState(for fragmentShaderName: String) throws -> MTLRenderPipelineState {
         let library = device.makeDefaultLibrary()
         let vertexFunction = library?.makeFunction(name: "vertexShader")
-        let fragmentFunction = library?.makeFunction(name: "sineLines")
+        let fragmentFunction = library?.makeFunction(name: fragmentShaderName)
         let pipelineDescriptor = MTLRenderPipelineDescriptor()
         pipelineDescriptor.vertexFunction = vertexFunction
         pipelineDescriptor.fragmentFunction = fragmentFunction
@@ -80,11 +96,7 @@ class MetalViewController: UIViewController {
 
         pipelineDescriptor.vertexDescriptor = vertexDescriptor
 
-        do {
-            pipelineState = try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
-        } catch {
-            print("Error: \(error.localizedDescription)")
-        }
+        return try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
     }
 }
 
@@ -126,8 +138,4 @@ extension MetalViewController: MTKViewDelegate {
         commandBuffer.present(drawable)
         commandBuffer.commit()
     }
-}
-
-#Preview {
-    MetalView()
 }

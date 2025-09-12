@@ -3,14 +3,26 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var selectedShader: ShaderType = .sineWave
+
     var body: some View {
         ZStack {
-            MetalView()
+            MetalView(selectedShader: $selectedShader)
                 .ignoresSafeArea()
-            
-            Text("Hello Sine Wave")
-                .font(.title)
-                .foregroundColor(.white)
+
+            VStack {
+                Picker("Select Shader", selection: $selectedShader) {
+                    ForEach(ShaderType.allCases) { shader in
+                        Text(shader.displayName)
+                            .tag(shader)
+                    }
+                }
+                .pickerStyle(MenuPickerStyle())
+                .padding(12)
+                .buttonStyle(.glassProminent)
+
+                Spacer()
+            }
         }
     }
 }
