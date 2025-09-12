@@ -13,16 +13,6 @@ struct VertexOut {
     float2 texCoord;
 };
 
-vertex VertexOut vertexShader(
-                              VertexIn in [[stage_in]],
-                              uint vertexID [[vertex_id]]
-                              ) {
-    VertexOut out;
-    out.position = float4(in.position, 0.0, 1.0);
-    out.texCoord = in.texCoord;
-    return out;
-}
-
 // Fragment shader parameters
 struct Uniforms {
     float4 iResolution;
