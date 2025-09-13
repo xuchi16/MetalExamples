@@ -5,6 +5,7 @@ import Foundation
 enum ShaderType: String, CaseIterable, Identifiable {
     case sineWave = "sineLines"
     case noiseSculptorShape = "noiseSculptorShape"
+    case raveLasers = "raveLasers"
     case gradientForTest = "gradientForTest"
     
     var id: String { rawValue }
@@ -13,6 +14,7 @@ enum ShaderType: String, CaseIterable, Identifiable {
         switch self {
         case .sineWave: return "Sine Wave"
         case .noiseSculptorShape: return "Noise Sculptor Shape"
+        case .raveLasers: return "Rave Lasers"
         case .gradientForTest: return "Gradient For Test"
         }
     }
